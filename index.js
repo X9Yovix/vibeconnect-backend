@@ -1,19 +1,46 @@
 const express = require("express")
-const process = require("process")
-const db = require("./config/db")
 const dotenv = require("dotenv")
 dotenv.config()
+const cors = require("cors")
+const session = require("express-session")
+const passport = require("passport")
+require("./configs/passport")
+const dbConnection = require("./configs/db")
+const authRoutes = require("./src/routes/auths")
+const authenticateJWT = require("./src/middlewares/auth")
+const process = require("process")
 
 const app = express()
+app.use(cors())
+const port = process.env.PORT || 4000
 
-const port = process.env.PORT
+app.use(
+  session({
+    secret: process.env.JWT_SECRET,
+    resave: false,
+    saveUninitialized: true
+  })
+)
 
-db()
+app.use(passport.initialize())
+app.use(passport.session())
+
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
+
+app.use("/auths", authRoutes)
+
+app.get("/profile", authenticateJWT, (req, res) => {
+  res.send(req.user)
+})
+
+dbConnection()
   .then(() => {
     app.listen(port, () => {
       console.log(`App is running on port ${port}`)
     })
   })
-  .catch(() => {
-    console.log("error")
+  .catch((err) => {
+    console.error("Database connection error:", err)
+    process.exit(1)
   })
