@@ -1,7 +1,6 @@
 const passport = require("passport")
 const GoogleStrategy = require("passport-google-oauth2").Strategy
 const User = require("../src/models/users")
-const process = require("process")
 
 passport.use(
   new GoogleStrategy(
@@ -15,7 +14,12 @@ passport.use(
       try {
         let user = await User.findOne({ googleId: profile.id })
         if (!user) {
-          user = await User.create({ googleId: profile.id, name: profile.displayName, email: profile.email })
+          user = await User.create({
+            googleId: profile.id,
+            firstName: profile.name.givenName,
+            lastName: profile.name.familyName,
+            email: profile.email
+          })
         }
         return done(null, user)
       } catch (error) {

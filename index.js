@@ -4,11 +4,12 @@ dotenv.config()
 const cors = require("cors")
 const session = require("express-session")
 const passport = require("passport")
-require("./configs/passport")
+require("./configs/passport_google")
 const dbConnection = require("./configs/db")
 const authRoutes = require("./src/routes/auths")
 const authenticateJWT = require("./src/middlewares/auth")
 const process = require("process")
+//const corsOptions = require("./configs/cors")
 
 const app = express()
 app.use(cors())
@@ -27,9 +28,9 @@ app.use(passport.session())
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+app.use(express.static(__dirname + "/public"))
 
 app.use("/auths", authRoutes)
-
 app.get("/profile", authenticateJWT, (req, res) => {
   res.send(req.user)
 })
