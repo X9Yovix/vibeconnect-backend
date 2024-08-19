@@ -12,7 +12,12 @@ const process = require("process")
 //const corsOptions = require("./configs/cors")
 
 const app = express()
-app.use(cors())
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URI,
+    credentials: true
+  })
+)
 const port = process.env.PORT || 4000
 
 app.use(

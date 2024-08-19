@@ -6,6 +6,7 @@ const fs = require("fs")
 const User = require("../models/users")
 const ResetPassword = require("../models/reset_passwords")
 const sendEmailService = require("../services/nodemailer")
+const { generateJwt } = require("../../configs/generate_jwt")
 
 const register = async (req, res) => {
   try {
@@ -46,9 +47,8 @@ const login = async (req, res) => {
     if (!isMatch) {
       return res.status(400).json({ error: "Incorrect password" })
     }
-
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN })
-    res.status(200).json({ token })
+    generateJwt(user._id, res)
+    res.status(200).json({ user: user, message: "Login successful" })
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: "Server error" })
@@ -63,8 +63,8 @@ const googleAuth = (req, res) => {
 }
 
 const googleAuthCallback = (req, res) => {
-  const token = jwt.sign({ userId: req.user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN })
-  res.redirect(`${process.env.FRONTEND_URI}?token=${token}`)
+  generateJwt(req.user._id, res)
+  res.redirect(`${process.env.FRONTEND_URI}`)
 }
 
 const forgetPassword = async (req, res) => {
@@ -155,11 +155,22 @@ const resetPassword = async (req, res) => {
   }
 }
 
+const logout = (req, res) => {
+  try {
+    res.cookie("token", "", { maxAge: 0 })
+    res.status(200).json({ message: "Logout successful" })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: "Server error" })
+  }
+}
+
 module.exports = {
   register,
   login,
   googleAuth,
   googleAuthCallback,
   forgetPassword,
-  resetPassword
+  resetPassword,
+  logout
 }
