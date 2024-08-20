@@ -1,5 +1,4 @@
 const passport = require("passport")
-const jwt = require("jsonwebtoken")
 const cryptoJs = require("crypto-js")
 const path = require("path")
 const fs = require("fs")
@@ -33,7 +32,7 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body
-    const user = await User.findOne({ email })
+    const user = await User.findOne({ email }).select("+password")
 
     if (!user) {
       return res.status(400).json({ error: "User does not exist" })
@@ -48,7 +47,10 @@ const login = async (req, res) => {
       return res.status(400).json({ error: "Incorrect password" })
     }
     generateJwt(user._id, res)
-    res.status(200).json({ user: user, message: "Login successful" })
+    const userResponse = user.toObject()
+    delete userResponse.password
+
+    res.status(200).json({ user: userResponse, message: "Login successful" })
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: "Server error" })

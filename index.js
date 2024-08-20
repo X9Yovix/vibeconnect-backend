@@ -9,6 +9,8 @@ const dbConnection = require("./configs/db")
 const authRoutes = require("./src/routes/auths")
 const authenticateJWT = require("./src/middlewares/auth")
 const process = require("process")
+const messageRoutes = require("./src/routes/messages")
+const cookieParser = require("cookie-parser")
 //const corsOptions = require("./configs/cors")
 
 const app = express()
@@ -35,7 +37,10 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(express.static(__dirname + "/public"))
 
+app.use(cookieParser())
+
 app.use("/auths", authRoutes)
+app.use("/messages", messageRoutes)
 app.get("/profile", authenticateJWT, (req, res) => {
   res.send(req.user)
 })
