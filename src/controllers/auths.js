@@ -149,7 +149,7 @@ const resetPassword = async (req, res) => {
     await user.save()
 
     res.status(200).json({
-      message: "Password reset successful"
+      message: "Password changed successfully"
     })
   } catch (error) {
     console.error(error)

@@ -7,10 +7,11 @@ const passport = require("passport")
 require("./configs/passport_google")
 const dbConnection = require("./configs/db")
 const authRoutes = require("./src/routes/auths")
-const authenticateJWT = require("./src/middlewares/auth")
-const process = require("process")
 const messageRoutes = require("./src/routes/messages")
+const userRoutes = require("./src/routes/users")
+const friendRequestRoutes = require("./src/routes/friend_requests")
 const cookieParser = require("cookie-parser")
+const path = require("path")
 //const corsOptions = require("./configs/cors")
 
 const app = express()
@@ -36,14 +37,14 @@ app.use(passport.session())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(express.static(__dirname + "/public"))
+app.use("/uploads", express.static(path.join(__dirname, "uploads")))
 
 app.use(cookieParser())
 
 app.use("/auths", authRoutes)
 app.use("/messages", messageRoutes)
-app.get("/profile", authenticateJWT, (req, res) => {
-  res.send(req.user)
-})
+app.use("/users", userRoutes)
+app.use("/friend-requests", friendRequestRoutes)
 
 dbConnection()
   .then(() => {

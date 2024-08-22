@@ -27,6 +27,11 @@ const usersSchema = new mongoose.Schema(
     image: {
       type: String,
       required: false
+    },
+    privacy: {
+      type: String,
+      enum: ["public", "private"],
+      default: "public"
     }
   },
   { timestamps: true }

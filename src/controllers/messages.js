@@ -1,5 +1,7 @@
 const Message = require("../models/messages")
 const Conversation = require("../models/conversations")
+const User = require("../models/users")
+const Friendship = require("../models/friendships")
 
 const sendMessage = async (req, res) => {
   try {
@@ -7,8 +9,25 @@ const sendMessage = async (req, res) => {
     const { message } = req.body
     const senderId = req.user._id
 
+    const receiver = await User.findById(receiverId)
+
+    if (!receiver) {
+      return res.status(404).json({ error: "User not found" })
+    }
+
+    const isFriend = await Friendship.findOne({
+      $or: [
+        { user1: senderId, user2: receiverId },
+        { user1: receiverId, user2: senderId }
+      ]
+    })
+
+    if (!isFriend && receiver.privacy === "private") {
+      return res.status(403).json({ error: "User is private" })
+    }
+
     let conversation = await Conversation.findOne({
-      participants: [senderId, receiverId]
+      participants: { $all: [senderId, receiverId] }
     })
 
     if (!conversation) {
@@ -18,21 +37,19 @@ const sendMessage = async (req, res) => {
     }
 
     const newMessage = new Message({
-      senderId: senderId,
-      receiverId: receiverId,
-      message: message
+      senderId,
+      receiverId,
+      message
     })
 
-    if (newMessage) {
-      conversation.messages.push(newMessage)
-    }
+    conversation.messages.push(newMessage)
 
     await Promise.all([conversation.save(), newMessage.save()])
 
     return res.status(201).json({ newMessage })
   } catch (error) {
     console.error(error)
-    res.status(500).json({ error: "Server error" })
+    return res.status(500).json({ error: "Server error" })
   }
 }
 
