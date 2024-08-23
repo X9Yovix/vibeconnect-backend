@@ -56,17 +56,42 @@ const searchUsers = async (req, res) => {
   }
 }
 
+const searchMyFriends = async (req, res) => {
+  try {
+    const currentUserId = req.user._id
+    const { query } = req.query
+
+    const friendshipsResult = await Friendships.find({
+      $or: [{ user1: currentUserId }, { user2: currentUserId }]
+    })
+
+    const friendIds = friendshipsResult.map((friendship) => (friendship.user1.equals(currentUserId) ? friendship.user2 : friendship.user1))
+
+    const friends = await User.find({
+      _id: { $in: friendIds },
+      $or: [{ firstName: { $regex: query, $options: "i" } }, { lastName: { $regex: query, $options: "i" } }]
+    })
+
+    res.status(200).json(friends)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: "Server error" })
+  }
+}
+
 const getFriendsList = async (req, res) => {
   try {
-    const userId = req.user._id
+    const currentUserId = req.user._id
 
     const friendships = await Friendships.find({
-      $or: [{ user1: userId }, { user2: userId }]
+      $or: [{ user1: currentUserId }, { user2: currentUserId }]
     })
       .populate("user1", "firstName lastName image email")
       .populate("user2", "firstName lastName image email")
 
-    const friends = friendships.map((friendship) => (friendship.user1._id.toString() === userId.toString() ? friendship.user2 : friendship.user1))
+    const friends = friendships.map((friendship) =>
+      friendship.user1._id.toString() === currentUserId.toString() ? friendship.user2 : friendship.user1
+    )
 
     return res.status(200).json({ friends })
   } catch (error) {
@@ -99,7 +124,8 @@ const unfriend = async (req, res) => {
 }
 
 module.exports = {
-  getFriendsList,
   searchUsers,
+  searchMyFriends,
+  getFriendsList,
   unfriend
 }

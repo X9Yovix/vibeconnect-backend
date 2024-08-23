@@ -1,3 +1,5 @@
+const mongoose = require("mongoose")
+
 const Message = require("../models/messages")
 const Conversation = require("../models/conversations")
 const User = require("../models/users")
@@ -57,13 +59,21 @@ const getMessages = async (req, res) => {
   try {
     const { receiverId } = req.params
     const senderId = req.user._id
+    const { limit = 20, skip = 0 } = req.query
 
     const conversation = await Conversation.findOne({
-      participants: [senderId, receiverId]
-    }).populate("messages")
+      participants: { $all: [senderId, receiverId] }
+    }).populate({
+      path: "messages",
+      options: {
+        sort: { createdAt: -1 },
+        limit: parseInt(limit),
+        skip: parseInt(skip)
+      }
+    })
 
     if (!conversation) {
-      return res.status(404).json({ messages: [] })
+      return res.status(200).json({ messages: [] })
     }
 
     return res.status(200).json({ messages: conversation.messages })
@@ -73,7 +83,44 @@ const getMessages = async (req, res) => {
   }
 }
 
+const getRecentContacts = async (req, res) => {
+  try {
+    const currentUserId = req.user._id
+
+    if (!mongoose.Types.ObjectId.isValid(currentUserId)) {
+      return res.status(400).json({ error: "Invalid user ID" })
+    }
+
+    const conversations = await Conversation.find({
+      participants: currentUserId
+    })
+      .populate({
+        path: "messages",
+        options: { sort: { createdAt: -1 }, limit: 1 }
+      })
+      //.sort({ "messages.createdAt": 1 })
+      .sort({ updatedAt: -1 })
+      .limit(15)
+
+    const recentContacts = []
+    for (const conversation of conversations) {
+      const otherParticipantId = conversation.participants.find((participant) => !participant.equals(currentUserId))
+
+      if (otherParticipantId && !recentContacts.some((contact) => contact._id.equals(otherParticipantId))) {
+        const user = await User.findById(otherParticipantId, "firstName lastName image")
+        if (user) recentContacts.push(user)
+      }
+    }
+
+    res.status(200).json(recentContacts)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: "Server error" })
+  }
+}
+
 module.exports = {
   sendMessage,
-  getMessages
+  getMessages,
+  getRecentContacts
 }

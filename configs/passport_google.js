@@ -13,14 +13,22 @@ passport.use(
     async function (request, accessToken, refreshToken, profile, done) {
       try {
         let user = await User.findOne({ googleId: profile.id })
+
         if (!user) {
-          user = await User.create({
-            googleId: profile.id,
-            firstName: profile.name.givenName,
-            lastName: profile.name.familyName,
-            email: profile.email
-          })
+          user = await User.findOne({ email: profile.email })
+          if (user) {
+            user.googleId = profile.id
+          } else {
+            user = new User({
+              googleId: profile.id,
+              firstName: profile.name.givenName,
+              lastName: profile.name.familyName,
+              email: profile.email
+            })
+          }
+          await user.save()
         }
+
         return done(null, user)
       } catch (error) {
         return done(error, null)
