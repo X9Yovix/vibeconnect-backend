@@ -13,8 +13,8 @@ const friendRequestRoutes = require("./src/routes/friend_requests")
 const cookieParser = require("cookie-parser")
 const path = require("path")
 //const corsOptions = require("./configs/cors")
+const { app, server } = require("./configs/socket")
 
-const app = express()
 app.use(
   cors({
     origin: process.env.FRONTEND_URI,
@@ -48,7 +48,7 @@ app.use("/friend-requests", friendRequestRoutes)
 
 dbConnection()
   .then(() => {
-    app.listen(port, () => {
+    server.listen(port, () => {
       console.log(`App is running on port ${port}`)
     })
   })

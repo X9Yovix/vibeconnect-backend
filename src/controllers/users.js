@@ -7,7 +7,7 @@ const searchUsers = async (req, res) => {
     const { query } = req.query
     const currentUserId = req.user._id
 
-    if (!query) {
+    if (!query || query.length < 1) {
       return res.status(400).json({ error: "Search query is required" })
     }
 
@@ -61,9 +61,17 @@ const searchMyFriends = async (req, res) => {
     const currentUserId = req.user._id
     const { query } = req.query
 
+    if (!query || query.length < 1) {
+      return res.status(400).json({ error: "Search query is required" })
+    }
+
     const friendshipsResult = await Friendships.find({
       $or: [{ user1: currentUserId }, { user2: currentUserId }]
     })
+
+    if (friendshipsResult.length < 1) {
+      return res.status(200).json([])
+    }
 
     const friendIds = friendshipsResult.map((friendship) => (friendship.user1.equals(currentUserId) ? friendship.user2 : friendship.user1))
 
