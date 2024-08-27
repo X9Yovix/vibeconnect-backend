@@ -4,6 +4,7 @@ const Message = require("../models/messages")
 const Conversation = require("../models/conversations")
 const User = require("../models/users")
 const Friendship = require("../models/friendships")
+const WS = require("../../configs/socket")
 
 const sendMessage = async (req, res) => {
   try {
@@ -47,6 +48,13 @@ const sendMessage = async (req, res) => {
     conversation.messages.push(newMessage)
 
     await Promise.all([conversation.save(), newMessage.save()])
+
+    const receiverSocketId = WS.userSocketMap[receiverId]
+    if (receiverSocketId) {
+      WS.io.to(receiverSocketId).emit("newMessage", newMessage)
+    } else {
+      console.error("receiver is not online")
+    }
 
     return res.status(201).json({ newMessage })
   } catch (error) {

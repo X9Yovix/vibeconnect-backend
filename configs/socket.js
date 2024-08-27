@@ -61,30 +61,12 @@ io.on("connection", async (socket) => {
       socket.emit("getOnlineFriendsResponse", onlineFriends)
     })
 
-    /* socket.on("getOnlineFriends", async () => {
-      const friends = await Friendship.find({
-        $or: [{ user1: userId }, { user2: userId }]
-      }).populate("user1 user2")
-
-      const friendIds = friends.map((friendship) =>
-        friendship.user1._id.toString() === userId ? friendship.user2._id.toString() : friendship.user1._id.toString()
-      )
-
-      const onlineFriends = friendIds.filter((id) => userSocketMap[id])
-      console.log(onlineFriends)
-      socket.emit("getOnlineFriendsResponse", onlineFriends)
-    })
- */
-    socket.on("chat message", (msg) => {
-      io.emit("chat message", msg)
+    // notify user that he received a new message
+    socket.on("newMessage", ({ conversationId, message }) => {
+      socket.emit("newMessage", { conversationId, message })
     })
   }
 
-  /* socket.on("disconnect", () => {
-    console.log("user disconnected", socket.id)
-    delete userSocketMap[userId]
-    io.emit("getOnlineFriends", Object.keys(userSocketMap))
-  }) */
   socket.on("disconnect", async () => {
     console.log("user disconnected", socket.id)
 
@@ -110,4 +92,4 @@ io.on("connection", async (socket) => {
   })
 })
 
-module.exports = { app, server }
+module.exports = { app, server, io, userSocketMap }
