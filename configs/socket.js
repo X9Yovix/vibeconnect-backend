@@ -9,6 +9,7 @@ const { Server } = require("socket.io")
 const mongoose = require("mongoose")
 const User = require("../src/models/users")
 const Friendship = require("../src/models/friendships")
+const Message = require("../src/models/messages")
 
 const io = new Server(server, {
   cors: {
@@ -57,13 +58,18 @@ io.on("connection", async (socket) => {
       )
 
       const onlineFriends = friendIds.filter((id) => userSocketMap[id])
-      console.log(onlineFriends)
+      //console.log(onlineFriends)
       socket.emit("getOnlineFriendsResponse", onlineFriends)
     })
 
-    // notify user that he received a new message
-    socket.on("newMessage", ({ conversationId, message }) => {
-      socket.emit("newMessage", { conversationId, message })
+    // notify user that he received a new message (sidebar)
+    socket.on("newMessage", ({ message }) => {
+      socket.emit("newMessage", { message })
+    })
+
+    // notify user number of unseen messages (main conversation)
+    socket.on("unseenCount", ({ unseenCount }) => {
+      socket.emit("unseenCount", { unseenCount })
     })
   }
 

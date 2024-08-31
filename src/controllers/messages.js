@@ -42,16 +42,20 @@ const sendMessage = async (req, res) => {
     const newMessage = new Message({
       senderId,
       receiverId,
-      message
+      message,
+      seen: false
     })
 
     conversation.messages.push(newMessage)
 
     await Promise.all([conversation.save(), newMessage.save()])
 
+    const unseenCount = await updateUnseenMessageCount(receiverId)
+
     const receiverSocketId = WS.userSocketMap[receiverId]
     if (receiverSocketId) {
       WS.io.to(receiverSocketId).emit("newMessage", newMessage)
+      WS.io.to(receiverSocketId).emit("unseenCount", unseenCount)
     } else {
       console.error("receiver is not online")
     }
@@ -104,19 +108,25 @@ const getRecentContacts = async (req, res) => {
     })
       .populate({
         path: "messages",
-        options: { sort: { createdAt: -1 }, limit: 1 }
+        match: { seen: false, receiverId: currentUserId },
+        select: "_id",
+        options: { sort: { createdAt: -1 } }
       })
-      //.sort({ "messages.createdAt": 1 })
       .sort({ updatedAt: -1 })
       .limit(15)
 
     const recentContacts = []
+
     for (const conversation of conversations) {
       const otherParticipantId = conversation.participants.find((participant) => !participant.equals(currentUserId))
 
+      const unseenCount = conversation.messages.length
+
       if (otherParticipantId && !recentContacts.some((contact) => contact._id.equals(otherParticipantId))) {
         const user = await User.findById(otherParticipantId, "firstName lastName image")
-        if (user) recentContacts.push(user)
+        if (user) {
+          recentContacts.push({ ...user.toObject(), unseenCount })
+        }
       }
     }
 
@@ -127,8 +137,55 @@ const getRecentContacts = async (req, res) => {
   }
 }
 
+const markMessagesAsSeen = async (req, res) => {
+  try {
+    const { receiverId } = req.params
+    const currentUserId = req.user._id
+
+    await Message.updateMany(
+      {
+        receiverId: currentUserId,
+        senderId: receiverId,
+        seen: false
+      },
+      { $set: { seen: true } }
+    )
+
+    res.status(200).json({ success: true })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: "Server error" })
+  }
+}
+
+const countUnseenMessages = async (req, res) => {
+  try {
+    const currentUserId = req.user._id
+
+    const unseenCount = await Message.countDocuments({
+      receiverId: currentUserId,
+      seen: false
+    })
+
+    res.status(200).json({ unseenCount })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: "Server error" })
+  }
+}
+
+const updateUnseenMessageCount = async (receiverId) => {
+  const unseenCount = await Message.countDocuments({
+    receiverId: receiverId,
+    seen: false
+  })
+  return unseenCount
+}
+
 module.exports = {
   sendMessage,
   getMessages,
-  getRecentContacts
+  getRecentContacts,
+  markMessagesAsSeen,
+  countUnseenMessages
 }
