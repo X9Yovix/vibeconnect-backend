@@ -1,6 +1,7 @@
 const User = require("../models/users")
 const FriendRequest = require("../models/friend_requests")
 const Friendships = require("../models/friendships")
+const Conversation = require("../models/conversations")
 
 const searchUsers = async (req, res) => {
   try {
@@ -80,7 +81,22 @@ const searchMyFriends = async (req, res) => {
       $or: [{ firstName: { $regex: query, $options: "i" } }, { lastName: { $regex: query, $options: "i" } }]
     })
 
-    res.status(200).json(friends)
+    const friendsWithUnseenMsg = []
+    for (const friend of friends) {
+      const conversations = await Conversation.find({
+        participants: { $all: [currentUserId, friend._id] }
+      }).populate({
+        path: "messages",
+        match: { seen: false, receiverId: currentUserId },
+        select: "_id"
+      })
+
+      const unseenCount = conversations.reduce((total, conversation) => total + conversation.messages.length, 0)
+
+      friendsWithUnseenMsg.push({ ...friend.toObject(), unseenCount })
+    }
+
+    res.status(200).json(friendsWithUnseenMsg)
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: "Server error" })
